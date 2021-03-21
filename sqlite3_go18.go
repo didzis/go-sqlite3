@@ -35,7 +35,7 @@ func (c *SQLiteConn) ExecContext(ctx context.Context, query string, args []drive
 
 // PrepareContext implement ConnPrepareContext.
 func (c *SQLiteConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	return c.prepare(ctx, query)
+	return c.prepare(ctx, query, false)
 }
 
 // BeginTx implement ConnBeginTx.
