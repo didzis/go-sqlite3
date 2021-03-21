@@ -97,6 +97,7 @@ _sqlite3_exec(sqlite3* db, const char* pcmd, long long* rowid, long long* change
 extern int _sqlite3_step_blocking(sqlite3_stmt *stmt);
 extern int _sqlite3_step_row_blocking(sqlite3_stmt* stmt, long long* rowid, long long* changes);
 extern int _sqlite3_prepare_v2_blocking(sqlite3 *db, const char *zSql, int nBytes, sqlite3_stmt **ppStmt, const char **pzTail);
+extern int _sqlite3_prepare_v3_blocking(sqlite3 *db, const char *zSql, int nBytes, unsigned int prepFlags, sqlite3_stmt **ppStmt, const char **pzTail);
 
 static int
 _sqlite3_step_internal(sqlite3_stmt *stmt)
@@ -114,6 +115,12 @@ static int
 _sqlite3_prepare_v2_internal(sqlite3 *db, const char *zSql, int nBytes, sqlite3_stmt **ppStmt, const char **pzTail)
 {
   return _sqlite3_prepare_v2_blocking(db, zSql, nBytes, ppStmt, pzTail);
+}
+
+static int
+_sqlite3_prepare_v3_internal(sqlite3 *db, const char *zSql, int nBytes, unsigned int prepFlags, sqlite3_stmt **ppStmt, const char **pzTail)
+{
+  return _sqlite3_prepare_v3_blocking(db, zSql, nBytes, prepFlags, ppStmt, pzTail);
 }
 
 #else
@@ -137,6 +144,12 @@ static int
 _sqlite3_prepare_v2_internal(sqlite3 *db, const char *zSql, int nBytes, sqlite3_stmt **ppStmt, const char **pzTail)
 {
   return sqlite3_prepare_v2(db, zSql, nBytes, ppStmt, pzTail);
+}
+
+static int
+_sqlite3_prepare_v3_internal(sqlite3 *db, const char *zSql, int nBytes, unsigned int prepFlags, sqlite3_stmt **ppStmt, const char **pzTail)
+{
+  return sqlite3_prepare_v3(db, zSql, nBytes, prepFlags, ppStmt, pzTail);
 }
 #endif
 
@@ -863,7 +876,7 @@ func (c *SQLiteConn) Exec(query string, args []driver.Value) (driver.Result, err
 func (c *SQLiteConn) exec(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	start := 0
 	for {
-		s, err := c.prepare(ctx, query)
+		s, err := c.prepare(ctx, query, false)
 		if err != nil {
 			return nil, err
 		}
@@ -925,7 +938,7 @@ func (c *SQLiteConn) query(ctx context.Context, query string, args []driver.Name
 	start := 0
 	for {
 		stmtArgs := make([]driver.NamedValue, 0, len(args))
-		s, err := c.prepare(ctx, query)
+		s, err := c.prepare(ctx, query, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1809,15 +1822,20 @@ func (c *SQLiteConn) dbConnOpen() bool {
 
 // Prepare the query string. Return a new statement.
 func (c *SQLiteConn) Prepare(query string) (driver.Stmt, error) {
-	return c.prepare(context.Background(), query)
+	return c.prepare(context.Background(), query, true)
 }
 
-func (c *SQLiteConn) prepare(ctx context.Context, query string) (driver.Stmt, error) {
+func (c *SQLiteConn) prepare(ctx context.Context, query string, persistent bool) (driver.Stmt, error) {
 	pquery := C.CString(query)
 	defer C.free(unsafe.Pointer(pquery))
 	var s *C.sqlite3_stmt
 	var tail *C.char
-	rv := C._sqlite3_prepare_v2_internal(c.db, pquery, C.int(-1), &s, &tail)
+	var rv C.int
+	if persistent {
+		rv = C._sqlite3_prepare_v3_internal(c.db, pquery, C.int(-1), C.SQLITE_PREPARE_PERSISTENT, &s, &tail)
+	} else {
+		rv = C._sqlite3_prepare_v2_internal(c.db, pquery, C.int(-1), &s, &tail)
+	}
 	if rv != C.SQLITE_OK {
 		return nil, c.lastError()
 	}

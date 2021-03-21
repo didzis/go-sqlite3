@@ -86,4 +86,26 @@ _sqlite3_prepare_v2_blocking(sqlite3 *db, const char *zSql, int nBytes, sqlite3_
 
   return rv;
 }
+
+int
+_sqlite3_prepare_v3_blocking(sqlite3 *db, const char *zSql, int nBytes, unsigned int prepFlags, sqlite3_stmt **ppStmt, const char **pzTail)
+{
+  int rv;
+
+  for (;;) {
+    rv = sqlite3_prepare_v3(db, zSql, nBytes, prepFlags, ppStmt, pzTail);
+    if (rv!=SQLITE_LOCKED) {
+      break;
+    }
+    if (sqlite3_extended_errcode(db) != SQLITE_LOCKED_SHAREDCACHE) {
+      break;
+    }
+    rv = unlock_notify_wait(db);
+    if (rv != SQLITE_OK) {
+      break;
+    }
+  }
+
+  return rv;
+}
 #endif
