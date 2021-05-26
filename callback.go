@@ -103,7 +103,7 @@ type handleVal struct {
 	val any
 }
 
-var handleLock sync.Mutex
+var handleLock sync.RWMutex
 var handleVals = make(map[unsafe.Pointer]handleVal)
 
 func newHandle(db *SQLiteConn, v any) unsafe.Pointer {
@@ -119,8 +119,8 @@ func newHandle(db *SQLiteConn, v any) unsafe.Pointer {
 }
 
 func lookupHandleVal(handle unsafe.Pointer) handleVal {
-	handleLock.Lock()
-	defer handleLock.Unlock()
+	handleLock.RLock()
+	defer handleLock.RUnlock()
 	return handleVals[handle]
 }
 
