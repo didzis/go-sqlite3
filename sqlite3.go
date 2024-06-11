@@ -1983,6 +1983,8 @@ func (s *SQLiteStmt) bind(args []driver.NamedValue) error {
 			case time.Time:
 				b := []byte(v.Format(SQLiteTimestampFormats[0]))
 				rv = C._sqlite3_bind_text(s.s, n, (*C.char)(unsafe.Pointer(&b[0])), C.int(len(b)))
+			default:
+				rv = s.bind_carray(arg.Value, n)
 			}
 			if rv != C.SQLITE_OK {
 				return s.c.lastError()
