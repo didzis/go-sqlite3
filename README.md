@@ -356,6 +356,8 @@ For example the TDM-GCC Toolchain can be found [here](https://jmeubank.github.io
 
 # User Authentication
 
+***This is deprecated***
+
 This package supports the SQLite User Authentication module.
 
 ## Compile
