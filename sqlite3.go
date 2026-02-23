@@ -21,8 +21,7 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1
 #cgo CFLAGS: -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT
 #cgo CFLAGS: -Wno-deprecated-declarations
-#cgo CFLAGS: -maes
-#cgo CFLAGS: -msse4.1
+#cgo !arm64 CFLAGS: -maes -msse4.1
 #cgo darwin LDFLAGS: -framework Security
 #cgo openbsd CFLAGS: -I/usr/local/include
 #cgo openbsd LDFLAGS: -L/usr/local/lib
