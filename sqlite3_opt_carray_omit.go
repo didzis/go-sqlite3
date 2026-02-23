@@ -1,5 +1,5 @@
-//go:build libsqlite3 || !carray
-// +build libsqlite3 !carray
+//go:build libsqlite3 || (!carray && !sqlite_carray)
+// +build libsqlite3 !carray,!sqlite_carray
 
 package sqlite3
 

@@ -1,5 +1,6 @@
-//go:build !libsqlite3 && carray
-// +build !libsqlite3,carray
+//go:build !libsqlite3 && (sqlite_carray || carray)
+// +build !libsqlite3
+// +build sqlite_carray carray
 
 package sqlite3
 
@@ -15,7 +16,6 @@ package sqlite3
 #include <stdint.h>
 #include <string.h>
 #include <sys/uio.h>
-#include "sqlite3/carray.h"
 */
 import "C"
 import (
