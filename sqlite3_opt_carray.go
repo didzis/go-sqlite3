@@ -32,6 +32,7 @@ func (c *SQLiteConn) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	case []float32:
 	case []float64:
 	case []string:
+	case []*string:
 	case [][]byte:
 	default:
 		err = driver.ErrSkip
@@ -89,6 +90,36 @@ func (s *SQLiteStmt) bind_carray(value driver.Value, n C.int) (rv C.int) {
 			*(*C.char)(unsafe.Pointer(uintptr(next) + uintptr(len(s)))) = 0 // zero terminating string
 
 			next = unsafe.Pointer(uintptr(next) + uintptr(len(s)) + 1)
+		}
+
+		rv = C.sqlite3_carray_bind(s.s, n, ptr, C.int(len(v)), C.CARRAY_TEXT, (*[0]byte)(unsafe.Pointer(C.free)))
+	case []*string:
+		totalSize := len(v) * C.sizeof_uintptr_t
+		for _, s := range v {
+			if s != nil {
+				totalSize += len(*s) + 1
+			} else {
+				totalSize += 1
+			}
+		}
+
+		ptr := C.malloc(C.size_t(totalSize))
+		next := unsafe.Pointer(uintptr(ptr) + uintptr(len(v)*C.sizeof_uintptr_t))
+
+		for i, s := range v {
+			len_s := 0
+			if s != nil {
+				len_s = len(*s)
+			}
+			if s != nil {
+				C.memcpy(next, unsafe.Pointer(C.CString(*s)), C.size_t(len_s))
+			}
+
+			*(**C.char)(unsafe.Pointer(uintptr(ptr) + C.sizeof_uintptr_t*uintptr(i))) = (*C.char)(next)
+
+			*(*C.char)(unsafe.Pointer(uintptr(next) + uintptr(len_s))) = 0 // zero terminating string
+
+			next = unsafe.Pointer(uintptr(next) + uintptr(len_s) + 1)
 		}
 
 		rv = C.sqlite3_carray_bind(s.s, n, ptr, C.int(len(v)), C.CARRAY_TEXT, (*[0]byte)(unsafe.Pointer(C.free)))
